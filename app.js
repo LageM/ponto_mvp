@@ -9,6 +9,9 @@ const netBadge = document.getElementById("netBadge");
 
 const TYPES = ["ENTRADA", "INTERVALO", "RETORNO", "SAÍDA"];
 
+let currentLocation = null;
+
+/* ===================== UTIL ===================== */
 function pad(n) { return String(n).padStart(2, "0"); }
 
 function nowBR() {
@@ -22,6 +25,7 @@ function nowBR() {
   return { d, time: `${hh}:${mm}:${ss}`, date: `${dd}/${mo}/${yy}` };
 }
 
+/* ===================== ONLINE ===================== */
 function setOnlineBadge() {
   const online = navigator.onLine;
   netBadge.textContent = online ? "Online" : "Offline";
@@ -30,6 +34,38 @@ function setOnlineBadge() {
   netBadge.style.borderColor = online ? "#c7eed7" : "#ffeeba";
 }
 
+/* ===================== GEOLOCALIZAÇÃO ===================== */
+function getLocation() {
+  if (!("geolocation" in navigator)) {
+    locStatus.textContent = "📍 Localização indisponível";
+    return;
+  }
+
+  locStatus.textContent = "📍 Solicitando localização…";
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude.toFixed(6);
+      const lng = position.coords.longitude.toFixed(6);
+      const acc = Math.round(position.coords.accuracy);
+
+      currentLocation = { lat, lng, acc };
+
+      locStatus.textContent = `📍 Localização ativa (±${acc}m)`;
+    },
+    () => {
+      locStatus.textContent = "📍 Localização não autorizada";
+      currentLocation = null;
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+}
+
+/* ===================== STATE ===================== */
 function loadState() {
   const saved = JSON.parse(localStorage.getItem("ponto_mvp_state") || "{}");
   return {
@@ -53,6 +89,7 @@ function resetIfNewDay(state) {
   return state;
 }
 
+/* ===================== RENDER ===================== */
 function render(state) {
   nextType.textContent = TYPES[state.nextIndex];
   historyList.innerHTML = "";
@@ -60,7 +97,7 @@ function render(state) {
   if (state.history.length === 0) {
     const li = document.createElement("li");
     li.className = "item";
-    li.innerHTML = `<div><strong>Sem marcações</strong><br><small>Toque em “BATER PONTO” para simular.</small></div>`;
+    li.innerHTML = `<div><strong>Sem marcações</strong><br><small>Toque em “BATER PONTO”.</small></div>`;
     historyList.appendChild(li);
     return;
   }
@@ -68,37 +105,46 @@ function render(state) {
   state.history.slice(-5).reverse().forEach(h => {
     const li = document.createElement("li");
     li.className = "item";
-    li.innerHTML = `<div><strong>${h.tipo}</strong><br><small>${h.local}</small></div><div><strong>${h.hora}</strong></div>`;
+    li.innerHTML = `
+      <div>
+        <strong>${h.tipo}</strong><br>
+        <small>${h.local}</small>
+      </div>
+      <div>
+        <strong>${h.hora}</strong>
+      </div>`;
     historyList.appendChild(li);
   });
 }
 
-function fakeLocation() {
-  // Fase 1: simulando "local OK"
-  // Depois a gente troca para navigator.geolocation.getCurrentPosition(...)
-  locStatus.textContent = "📍 Localização: confirmada (mock)";
-}
-
+/* ===================== CLOCK ===================== */
 function tick() {
   const { time, date } = nowBR();
   timeNow.textContent = time;
   dateNow.textContent = date;
 }
 
+/* ===================== INIT ===================== */
 let state = resetIfNewDay(loadState());
 saveState(state);
 render(state);
 tick();
 setOnlineBadge();
-fakeLocation();
+getLocation();
 
 setInterval(tick, 500);
 window.addEventListener("online", setOnlineBadge);
 window.addEventListener("offline", setOnlineBadge);
 
+/* ===================== ACTION ===================== */
 btnPunch.addEventListener("click", () => {
   if (!navigator.onLine) {
-    hint.textContent = "Sem internet (simulado): tente novamente quando estiver online.";
+    hint.textContent = "⚠️ Sem internet. Tente novamente.";
+    return;
+  }
+
+  if (!currentLocation) {
+    hint.textContent = "⚠️ Ative a localização para registrar o ponto.";
     return;
   }
 
@@ -108,7 +154,8 @@ btnPunch.addEventListener("click", () => {
   setTimeout(() => {
     const { time } = nowBR();
     const tipo = TYPES[state.nextIndex];
-    const local = "UBS Cajazeiras";
+
+    const local = `Lat ${currentLocation.lat}, Lng ${currentLocation.lng}`;
 
     state.history.push({ tipo, hora: time, local });
     state.nextIndex = (state.nextIndex + 1) % TYPES.length;
@@ -116,7 +163,11 @@ btnPunch.addEventListener("click", () => {
     saveState(state);
     render(state);
 
-    hint.textContent = `✅ ${tipo} registrada às ${time} (mock)`;
+    console.log("Localização registrada:", currentLocation);
+
+    hint.textContent = `✅ ${tipo} registrada às ${time}`;
     btnPunch.disabled = false;
   }, 600);
 });
+
+
