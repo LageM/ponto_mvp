@@ -12,17 +12,17 @@ const TYPES = ["ENTRADA", "INTERVALO", "RETORNO", "SAÍDA"];
 let currentLocation = null;
 
 /* ===================== UTIL ===================== */
-function pad(n) { return String(n).padStart(2, "0"); }
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
 
 function nowBR() {
   const d = new Date();
-  const hh = pad(d.getHours());
-  const mm = pad(d.getMinutes());
-  const ss = pad(d.getSeconds());
-  const dd = pad(d.getDate());
-  const mo = pad(d.getMonth() + 1);
-  const yy = d.getFullYear();
-  return { d, time: `${hh}:${mm}:${ss}`, date: `${dd}/${mo}/${yy}` };
+  return {
+    d,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`,
+    date: `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+  };
 }
 
 /* ===================== ONLINE ===================== */
@@ -34,24 +34,47 @@ function setOnlineBadge() {
   netBadge.style.borderColor = online ? "#c7eed7" : "#ffeeba";
 }
 
-/* ===================== GEOLOCALIZAÇÃO ===================== */
+/* ===================== GEOLOCALIZAÇÃO + ENDEREÇO ===================== */
 function getLocation() {
   if (!("geolocation" in navigator)) {
     locStatus.textContent = "📍 Localização indisponível";
     return;
   }
 
-  locStatus.textContent = "📍 Solicitando localização…";
+  locStatus.textContent = "📍 Obtendo localização…";
 
   navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const lat = position.coords.latitude.toFixed(6);
-      const lng = position.coords.longitude.toFixed(6);
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
       const acc = Math.round(position.coords.accuracy);
 
-      currentLocation = { lat, lng, acc };
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        );
+        const data = await response.json();
 
-      locStatus.textContent = `📍 Localização ativa (±${acc}m)`;
+        const address = data.display_name || "Endereço não identificado";
+
+        currentLocation = {
+          lat: lat.toFixed(6),
+          lng: lng.toFixed(6),
+          acc,
+          address
+        };
+
+        locStatus.textContent = `📍 ${address}`;
+      } catch (error) {
+        currentLocation = {
+          lat: lat.toFixed(6),
+          lng: lng.toFixed(6),
+          acc,
+          address: "Endereço não identificado"
+        };
+
+        locStatus.textContent = `📍 Localização ativa (±${acc}m)`;
+      }
     },
     () => {
       locStatus.textContent = "📍 Localização não autorizada";
@@ -97,7 +120,11 @@ function render(state) {
   if (state.history.length === 0) {
     const li = document.createElement("li");
     li.className = "item";
-    li.innerHTML = `<div><strong>Sem marcações</strong><br><small>Toque em “BATER PONTO”.</small></div>`;
+    li.innerHTML = `
+      <div>
+        <strong>Sem marcações</strong><br>
+        <small>Toque em “BATER PONTO”.</small>
+      </div>`;
     historyList.appendChild(li);
     return;
   }
@@ -154,20 +181,26 @@ btnPunch.addEventListener("click", () => {
   setTimeout(() => {
     const { time } = nowBR();
     const tipo = TYPES[state.nextIndex];
+    const local = currentLocation.address;
 
-    const local = `Lat ${currentLocation.lat}, Lng ${currentLocation.lng}`;
+    state.history.push({
+      tipo,
+      hora: time,
+      local
+    });
 
-    state.history.push({ tipo, hora: time, local });
     state.nextIndex = (state.nextIndex + 1) % TYPES.length;
 
     saveState(state);
     render(state);
 
-    console.log("Localização registrada:", currentLocation);
+    console.log("Registro de ponto:", {
+      tipo,
+      hora: time,
+      localizacao: currentLocation
+    });
 
     hint.textContent = `✅ ${tipo} registrada às ${time}`;
     btnPunch.disabled = false;
   }, 600);
 });
-
-
