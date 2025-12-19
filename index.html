@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ponto - MVP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="card">
+    <header class="top">
+      <div>
+        <h1>Bater Ponto</h1>
+        <p class="sub" id="userLine">Bom dia, João 👋 • Posto: UBS Cajazeiras</p>
+      </div>
+      <span class="badge" id="netBadge">Online</span>
+    </header>
+
+    <section class="clock">
+      <div class="time" id="timeNow">--:--:--</div>
+      <div class="meta">
+        <span id="dateNow">--/--/----</span>
+        <span class="dot">•</span>
+        <span id="locStatus">📍 Localização: verificando…</span>
+      </div>
+    </section>
+
+    <section class="action">
+      <button id="btnPunch" class="btn">BATER PONTO</button>
+      <p class="next">Próxima marcação: <strong id="nextType">ENTRADA</strong></p>
+      <p class="hint" id="hint"></p>
+    </section>
+
+    <section class="history">
+      <h2>Hoje</h2>
+      <ul id="historyList" class="list"></ul>
+    </section>
+
+    <footer class="foot">
+      <small>Interface MVP (sem integração). Registro oficial continuará no Ponto+.</small>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
