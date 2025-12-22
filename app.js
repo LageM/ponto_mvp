@@ -65,7 +65,7 @@ function getLocation() {
         };
 
         locStatus.textContent = `📍 ${address}`;
-      } catch (error) {
+      } catch {
         currentLocation = {
           lat: lat.toFixed(6),
           lng: lng.toFixed(6),
@@ -86,6 +86,19 @@ function getLocation() {
       maximumAge: 0
     }
   );
+}
+
+/* ===================== WEBHOOK ===================== */
+function sendToWebhook(payload) {
+  fetch("https://lagem.app.n8n.cloud/webhook/ponto", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  }).catch(err => {
+    console.error("Erro ao enviar para webhook:", err);
+  });
 }
 
 /* ===================== STATE ===================== */
@@ -179,25 +192,27 @@ btnPunch.addEventListener("click", () => {
   btnPunch.disabled = true;
 
   setTimeout(() => {
-    const { time } = nowBR();
+    const { time, date } = nowBR();
     const tipo = TYPES[state.nextIndex];
     const local = currentLocation.address;
 
-    state.history.push({
-      tipo,
-      hora: time,
-      local
-    });
-
+    // Salva no histórico local
+    state.history.push({ tipo, hora: time, local });
     state.nextIndex = (state.nextIndex + 1) % TYPES.length;
-
     saveState(state);
     render(state);
 
-    console.log("Registro de ponto:", {
-      tipo,
+    // ENVIO PARA O WEBHOOK
+    sendToWebhook({
+      data: date,
       hora: time,
-      localizacao: currentLocation
+      colaborador: "João", // depois vira dinâmico
+      tipo,
+      endereco: currentLocation.address,
+      latitude: currentLocation.lat,
+      longitude: currentLocation.lng,
+      precisao: currentLocation.acc,
+      origem: "Facilita+"
     });
 
     hint.textContent = `✅ ${tipo} registrada às ${time}`;
