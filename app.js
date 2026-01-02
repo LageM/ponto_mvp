@@ -6,6 +6,7 @@ const nextType = document.getElementById("nextType");
 const historyList = document.getElementById("historyList");
 const hint = document.getElementById("hint");
 const netBadge = document.getElementById("netBadge");
+const userLine = document.getElementById("userLine"); // 🔹 NOVO
 
 /* ===================== AUTH ===================== */
 const usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
@@ -14,6 +15,9 @@ if (!usuarioLogado || !usuarioLogado.nome) {
   alert("Sessão expirada. Faça login novamente.");
   window.location.href = "../login.html"; // ajuste se necessário
 }
+
+// 🔹 NOVO — preenche cabeçalho com usuário logado
+userLine.textContent = `Bom dia, ${usuarioLogado.nome} 👋 • Posto: ${usuarioLogado.secao}`;
 
 const TYPES = ["ENTRADA", "INTERVALO", "RETORNO", "SAÍDA"];
 
@@ -202,19 +206,24 @@ btnPunch.addEventListener("click", () => {
   setTimeout(() => {
     const { time, date } = nowBR();
     const tipo = TYPES[state.nextIndex];
-    const local = currentLocation.address;
 
     // Salva no histórico local
-    state.history.push({ tipo, hora: time, local });
+    state.history.push({
+      tipo,
+      hora: time,
+      local: currentLocation.address
+    });
+
     state.nextIndex = (state.nextIndex + 1) % TYPES.length;
     saveState(state);
     render(state);
 
-    // ENVIO PARA O WEBHOOK
+    // 🔹 ENVIO PARA O WEBHOOK COM USUÁRIO LOGADO
     sendToWebhook({
       data: date,
       hora: time,
-      colaborador: "João", // depois vira dinâmico
+      colaborador: usuarioLogado.nome,
+      secao: usuarioLogado.secao,
       tipo,
       endereco: currentLocation.address,
       latitude: currentLocation.lat,
@@ -227,4 +236,3 @@ btnPunch.addEventListener("click", () => {
     btnPunch.disabled = false;
   }, 600);
 });
-
