@@ -7,6 +7,14 @@ const historyList = document.getElementById("historyList");
 const hint = document.getElementById("hint");
 const netBadge = document.getElementById("netBadge");
 
+/* ===================== AUTH ===================== */
+const usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
+
+if (!usuarioLogado || !usuarioLogado.nome) {
+  alert("Sessão expirada. Faça login novamente.");
+  window.location.href = "../login.html"; // ajuste se necessário
+}
+
 const TYPES = ["ENTRADA", "INTERVALO", "RETORNO", "SAÍDA"];
 
 let currentLocation = null;
@@ -219,3 +227,4 @@ btnPunch.addEventListener("click", () => {
     btnPunch.disabled = false;
   }, 600);
 });
+
